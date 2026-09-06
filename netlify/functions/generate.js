@@ -1,4 +1,4 @@
-// Netlify Function: 代理 AI 攻略生成请求（智谱 AI 版）
+// Netlify Function: 代理 AI 攻略生成请求（智谱 AI 版 - 非流式）
 // API Key 存在 Netlify 环境变量 ZHIPU_API_KEY 中，前端不可见
 
 const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
@@ -20,24 +20,36 @@ async function callAI(apiKey, prompt, attempt = 0) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt }
       ],
-      stream: true,
+      stream: false,
       max_tokens: 2000,
       temperature: 0.7,
       top_p: 0.9
     })
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const errText = await response.text();
+    console.error(`AI API error (${response.status}):`, responseText.substring(0, 500));
     if ((response.status === 502 || response.status === 503 || response.status === 504 || response.status === 429) && attempt < MAX_RETRIES) {
       console.log(`Attempt ${attempt + 1} failed with ${response.status}, retrying...`);
       await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
       return callAI(apiKey, prompt, attempt + 1);
     }
-    throw new Error(`AI 服务返回错误 (${response.status}): ${errText}`);
+    throw new Error(`AI 服务返回错误 (${response.status}): ${responseText.substring(0, 300)}`);
   }
 
-  return response;
+  try {
+    const data = JSON.parse(responseText);
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('AI 返回内容为空: ' + responseText.substring(0, 300));
+    }
+    return content;
+  } catch (e) {
+    if (e.message.includes('AI 返回内容为空')) throw e;
+    throw new Error('AI 响应解析失败: ' + responseText.substring(0, 300));
+  }
 }
 
 exports.handler = async (event, context) => {
@@ -54,7 +66,7 @@ exports.handler = async (event, context) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v5-zhipu' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v6-zhipu-nostream' }) };
   }
 
   try {
@@ -62,26 +74,24 @@ exports.handler = async (event, context) => {
     if (!apiKey) {
       return {
         statusCode: 500,
-        headers,
+        headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: '服务器未配置 API Key，请在 Netlify 环境变量中设置 ZHIPU_API_KEY' })
       };
     }
 
     const { prompt } = JSON.parse(event.body);
     if (!prompt) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: '缺少 prompt 参数' }) };
+      return { statusCode: 400, headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '缺少 prompt 参数' }) };
     }
 
-    const response = await callAI(apiKey, prompt);
+    console.log('Calling AI API...');
+    const content = await callAI(apiKey, prompt);
+    console.log('AI response received, length:', content.length);
 
     return {
       statusCode: 200,
-      headers: {
-        ...headers,
-        'Content-Type': 'text/event-stream',
-        'Connection': 'keep-alive'
-      },
-      body: response.body
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content, model: MODEL, version: 'v6-zhipu-nostream' })
     };
 
   } catch (error) {
@@ -89,7 +99,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: '服务器内部错误: ' + error.message, model: MODEL })
+      body: JSON.stringify({ error: error.message, model: MODEL, version: 'v6-zhipu-nostream' })
     };
   }
 };
