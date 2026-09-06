@@ -299,7 +299,7 @@
       <div class="loading-box">
         <div class="spinner"></div>
         <div class="loading-text" id="loadingText">AI 正在为你规划行程...</div>
-        <div class="loading-sub" id="loadingSub">通常需要 15-30 秒，请稍候</div>
+        <div class="loading-sub" id="loadingSub">通常需要 10-30 秒，请稍候</div>
       </div>
     </div>
   </div>
@@ -307,10 +307,9 @@
     <div class="card">
       <div class="tabs" id="resultTabs">
         <button class="tab active" data-tab="full">📋 完整攻略</button>
-        <button class="tab" data-tab="cost">💰 费用估算</button>
-        <button class="tab" data-tab="weather">🌤 天气建议</button>
-        <button class="tab" data-tab="tickets">🎫 门票提醒</button>
-        <button class="tab" data-tab="route">🗺 路线建议</button>
+        <button class="tab" data-tab="daily">📅 每日行程</button>
+        <button class="tab" data-tab="cost">💰 美食费用</button>
+        <button class="tab" data-tab="tips">📌 实用提醒</button>
       </div>
       <div class="result-content" id="resultContent"></div>
       <div class="action-bar">
@@ -391,7 +390,7 @@ function buildPrompt() {
   const accommodation = document.getElementById('accommodation').value;
   const pace = document.getElementById('pace').value;
   const diet = document.getElementById('diet').value || '无特殊忌口';
-  return `请为我规划一份紧凑实用的旅游攻略，要求如下：
+  return `请为我规划一份精简实用的旅游攻略，要求如下：
 
 【基本信息】
 - 目的地：${destination}
@@ -410,44 +409,26 @@ function buildPrompt() {
 - 饮食忌口/偏好：${diet}
 
 【输出要求】
-请严格按照以下结构输出，使用 Markdown 格式，内容紧凑实用：
+请严格按照以下结构输出，使用 Markdown 格式：
 
 ## 一、行程总览
 3-5句话概括整体安排、核心亮点、适合人群。
 
 ## 二、每日行程
-按天列出，每天格式：
-**第X天：主题**
-- 上午：景点1（约X小时，门票XX元）+ 简短游玩建议
-- 中午：推荐美食（人均XX元）
-- 下午：景点2（约X小时，门票XX元）+ 简短游玩建议
-- 晚上：景点3/活动 + 推荐晚餐
-- 交通：景点间移动方式
-- 住宿：推荐区域/类型
+按天列出，每天包含：上午景点、中午美食、下午景点、晚上活动、交通建议、住宿推荐。
 
-## 三、美食推荐
-推荐3-5道当地特色美食，包含店名、招牌菜、人均消费。
+## 三、美食与费用
+- 推荐3-5道当地特色美食（店名、招牌菜、人均）
+- 费用估算表格（交通、住宿、门票、餐饮、总计，按${budget}预算）
 
-## 四、费用估算
-表格列出：交通、住宿、门票、餐饮、其他，及总计（按${budget}预算估算）。
-
-## 五、天气与出行建议
-天气预测、穿衣建议、最佳游玩时间、防晒/防雨提醒。
-
-## 六、实用提醒
-- 必带物品
-- 需预约景点（含预约渠道、提前天数）
-- 交通小贴士
-- 避坑提醒
-- 紧急联系方式
+## 四、实用提醒
+天气穿衣建议、必带物品、需预约景点、交通贴士、避坑提醒、紧急联系方式。
 
 【重要提醒】
-- 结合爱好（${hobbies}）、同行人群（${companions}）、预算（${budget}）、节奏（${pace}）做个性化推荐。
-- 有老人或儿童时行程放慢，增加休息时间。
-- 景点名称用【】标记，例如【西湖】。
-- 内容实用具体，有具体的时间、价格、地址、建议，不泛泛而谈。
-- 语言精炼，避免废话和重复，每个要点都要有价值。
-- 总字数控制在 1500-2500 字，紧凑实用为主。`;
+- 结合爱好（${hobbies}）、同行人群（${companions}）、预算（${budget}）做个性化推荐。
+- 景点名称用【】标记。
+- 内容实用具体，有具体的时间、价格、建议。
+- 总字数控制在 1200-2000 字，精简实用为主。`;
 }
 async function generateGuide() {
   const destination = document.getElementById('destination').value.trim();
@@ -516,10 +497,9 @@ function renderTab(tab) {
   const content = document.getElementById('resultContent');
   const sections = {
     full: '',
-    cost: extractSection(currentResult, ['四、费用估算', '费用估算']),
-    weather: extractSection(currentResult, ['五、天气与出行建议', '天气与出行建议']),
-    tickets: extractSection(currentResult, ['六、实用提醒', '实用提醒']),
-    route: extractSection(currentResult, ['六、实用提醒', '实用提醒'])
+    daily: extractSection(currentResult, ['二、每日行程', '每日行程']),
+    cost: extractSection(currentResult, ['三、美食与费用', '美食与费用']),
+    tips: extractSection(currentResult, ['四、实用提醒', '实用提醒'])
   };
   if (tab === 'full') {
     content.innerHTML = markdownToHtml(currentResult) + (isStreaming ? '<span class="streaming-cursor"></span>' : '');
