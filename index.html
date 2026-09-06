@@ -299,7 +299,7 @@
       <div class="loading-box">
         <div class="spinner"></div>
         <div class="loading-text" id="loadingText">AI 正在为你规划行程...</div>
-        <div class="loading-sub" id="loadingSub">通常需要 10-30 秒，请稍候</div>
+        <div class="loading-sub" id="loadingSub">通常需要 15-30 秒，请稍候</div>
       </div>
     </div>
   </div>
@@ -446,7 +446,7 @@ function buildPrompt() {
 - 有老人或儿童时行程放慢，增加休息时间，推荐无障碍设施。
 - 景点名称用【】标记，例如【西湖】。
 - 内容实用具体，有具体的时间、价格、地址、建议，不泛泛而谈。
-- 总字数控制在 3000-5000 字，详细丰富为主。`;
+- 总字数控制在 2000-3500 字，详略得当。`;
 }
 async function generateGuide() {
   const destination = document.getElementById('destination').value.trim();

@@ -21,7 +21,7 @@ async function callAI(apiKey, prompt, attempt = 0) {
         { role: 'user', content: prompt }
       ],
       stream: false,
-      max_tokens: 4000,
+      max_tokens: 3000,
       temperature: 0.7,
       top_p: 0.9
     })
