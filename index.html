@@ -16,6 +16,8 @@
     --bg: #F5F6FA;
     --card: #FFFFFF;
     --border: #E5E7EB;
+    --success: #52C41A;
+    --danger: #EA6668;
     --radius: 14px;
     --shadow: 0 2px 12px rgba(0,0,0,0.06);
   }
@@ -45,7 +47,7 @@
     display: block; font-size: 13px; font-weight: 500;
     color: var(--text); margin-bottom: 6px;
   }
-  .form-group label .required { color: #EA6668; }
+  .form-group label .required { color: var(--danger); }
   .form-row { display: flex; gap: 12px; }
   .form-row .form-group { flex: 1; }
   input[type="text"], input[type="number"], input[type="date"], select, textarea {
@@ -90,6 +92,8 @@
   .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
   .btn-secondary { background: var(--primary-light); color: var(--primary-dark); }
   .btn-block { width: 100%; }
+  .btn-group { display: flex; gap: 10px; }
+  .btn-group .btn { flex: 1; }
   .loading-box { text-align: center; padding: 40px 20px; }
   .spinner {
     width: 40px; height: 40px; border: 3px solid var(--primary-light);
@@ -356,13 +360,9 @@ function initTravelers() {
   }
 }
 function initCheckboxGroups() {
-  document.querySelectorAll('.checkbox-item').forEach(item => {
-    item.addEventListener('click', function(e) {
-      if (e.target.tagName !== 'INPUT') {
-        const input = this.querySelector('input');
-        input.checked = !input.checked;
-      }
-      this.classList.toggle('checked', this.querySelector('input').checked);
+  document.querySelectorAll('.checkbox-item input').forEach(input => {
+    input.addEventListener('change', function() {
+      this.closest('.checkbox-item').classList.toggle('checked', this.checked);
     });
   });
 }

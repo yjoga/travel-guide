@@ -2,7 +2,7 @@
 // API Key 存在 Netlify 环境变量 SILICONFLOW_API_KEY 中，前端不可见
 
 const API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
-const MODEL = 'THUDM/glm-4-9b-chat';
+const MODEL = 'Qwen/Qwen2-7B-Instruct';
 
 const SYSTEM_PROMPT = '你是一个专业、资深的旅游攻略规划师，擅长根据用户的个性化需求制定详细、实用、可执行的旅游行程。你的回答要具体、有操作性，不要泛泛而谈。';
 
