@@ -446,7 +446,7 @@ function buildPrompt() {
 - 有老人或儿童时行程放慢，增加休息时间，推荐无障碍设施。
 - 景点名称用【】标记，例如【西湖】。
 - 内容实用具体，有具体的时间、价格、地址、建议，不泛泛而谈。
-- 总字数控制在 2000-3500 字，详略得当。`;
+- 总字数控制在 2000-3000 字，详略得当。`;
 }
 async function generateGuide() {
   const destination = document.getElementById('destination').value.trim();
@@ -482,34 +482,12 @@ async function generateGuide() {
       } catch(e) {}
       throw new Error(errMsg);
     }
-    // 流式读取：AI 一边生成一边显示，不会超时
+    // 非流式：等 AI 生成完一次性返回
+    const data = await response.json();
+    currentResult = data.content || '';
     clearInterval(textInterval);
     document.getElementById('loading-section').style.display = 'none';
     document.getElementById('result-section').style.display = 'block';
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const data = trimmed.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const json = JSON.parse(data);
-          const content = json.choices?.[0]?.delta?.content;
-          if (content) {
-            currentResult += content;
-            updateResultDisplay();
-          }
-        } catch (e) { /* 忽略解析错误 */ }
-      }
-    }
     isStreaming = false;
     document.getElementById('generateBtn').disabled = false;
     updateResultDisplay();
