@@ -1,4 +1,4 @@
-// Netlify Function: 代理 AI 攻略生成请求（智谱 AI 版 - 非流式平衡版）
+// Netlify Function: 代理 AI 攻略生成请求（智谱 AI 版 - 稳定版）
 // API Key 存在 Netlify 环境变量 ZHIPU_API_KEY 中，前端不可见
 
 const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
@@ -21,7 +21,7 @@ async function callAI(apiKey, prompt, attempt = 0) {
         { role: 'user', content: prompt }
       ],
       stream: false,
-      max_tokens: 2500,
+      max_tokens: 2000,
       temperature: 0.7,
       top_p: 0.9
     })
@@ -66,7 +66,7 @@ exports.handler = async (event, context) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v8-zhipu-balanced' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v9-zhipu-stable' }) };
   }
 
   try {
@@ -84,14 +84,14 @@ exports.handler = async (event, context) => {
       return { statusCode: 400, headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '缺少 prompt 参数' }) };
     }
 
-    console.log('Calling AI API (balanced)...');
+    console.log('Calling AI API (stable)...');
     const content = await callAI(apiKey, prompt);
     console.log('AI response received, length:', content.length);
 
     return {
       statusCode: 200,
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content, model: MODEL, version: 'v8-zhipu-balanced' })
+      body: JSON.stringify({ content: content, model: MODEL, version: 'v9-zhipu-stable' })
     };
 
   } catch (error) {
@@ -99,7 +99,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: error.message, model: MODEL, version: 'v8-zhipu-balanced' })
+      body: JSON.stringify({ error: error.message, model: MODEL, version: 'v9-zhipu-stable' })
     };
   }
 };
