@@ -51,7 +51,7 @@ exports.handler = async (event, context) => {
           { role: 'user', content: prompt }
         ],
         stream: true,
-        max_tokens: 6000,
+        max_tokens: 4000,
         temperature: 0.7,
         top_p: 0.9
       })
