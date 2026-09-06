@@ -11,7 +11,8 @@ exports.handler = async (event, context) => {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Cache-Control': 'no-cache'
+    'Cache-Control': 'no-cache',
+    'X-Model': MODEL
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -19,7 +20,7 @@ exports.handler = async (event, context) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v2-qwen2' }) };
   }
 
   try {
@@ -61,7 +62,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: response.status,
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: `AI 服务返回错误 (${response.status}): ${errText}` })
+        body: JSON.stringify({ error: `AI 服务返回错误 (${response.status}): ${errText}`, model: MODEL })
       };
     }
 
