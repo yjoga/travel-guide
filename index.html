@@ -299,7 +299,7 @@
       <div class="loading-box">
         <div class="spinner"></div>
         <div class="loading-text" id="loadingText">AI 正在为你规划行程...</div>
-        <div class="loading-sub" id="loadingSub">通常需要 10-30 秒，请稍候</div>
+        <div class="loading-sub" id="loadingSub">通常需要 10-20 秒，请稍候</div>
       </div>
     </div>
   </div>
@@ -391,7 +391,7 @@ function buildPrompt() {
   const accommodation = document.getElementById('accommodation').value;
   const pace = document.getElementById('pace').value;
   const diet = document.getElementById('diet').value || '无特殊忌口';
-  return `请为我规划一份详细的旅游攻略，要求如下：
+  return `请为我规划一份精简实用的旅游攻略，要求如下：
 
 【基本信息】
 - 目的地：${destination}
@@ -410,36 +410,32 @@ function buildPrompt() {
 - 饮食忌口/偏好：${diet}
 
 【输出要求】
-请严格按照以下结构输出，使用 Markdown 格式：
+请严格按照以下结构输出，使用 Markdown 格式，简洁精炼：
 
 ## 一、行程总览
-简要介绍这次旅行的整体安排、亮点和注意事项。
+3-5句话概括整体安排、核心亮点和注意事项。
 
 ## 二、每日行程
-按天详细安排，每天包含上午、中午、下午、晚上的行程，包括：
-- 景点推荐（含景点介绍、建议游玩时间、门票参考）
-- 餐饮推荐（符合预算和饮食偏好）
-- 交通衔接（景点之间的移动方式和大致耗时）
-- 住宿建议
+按天列出，每天格式：
+**第X天：主题**
+- 上午：景点1（游玩时间，门票）+ 简要介绍
+- 下午：景点2（游玩时间，门票）+ 简要介绍
+- 餐饮：推荐1-2家特色餐厅/美食
+- 交通：景点间移动方式
+- 住宿：推荐区域/类型
 
 ## 三、费用估算
-分项列出费用明细：交通费、住宿费、门票费、餐饮费、其他费用，以及总计。按${budget}预算估算。
+表格形式列出：交通、住宿、门票、餐饮、其他，及总计（按${budget}预算估算）。
 
-## 四、天气与出行建议
-根据${destination}的季节和气候特点，给出穿衣建议、必备物品、天气应对方案。
-
-## 五、门票预约提醒
-列出需要提前预约的景点，包括预约渠道、建议提前天数、注意事项。
-
-## 六、路线与交通建议
-给出整体路线规划建议、交通方式选择、市内交通攻略、返程安排。
+## 四、实用提醒
+包含：天气穿衣建议、必带物品、需预约景点（含预约渠道和提前天数）、交通小贴士、避坑提醒。
 
 【重要提醒】
-- 所有推荐要结合用户的爱好（${hobbies}）、同行人群（${companions}）、预算（${budget}）、节奏（${pace}）、饮食偏好（${diet}）做个性化定制。
-- 如果有老人或儿童，行程节奏要放慢，安排休息时间。
+- 结合爱好（${hobbies}）、同行人群（${companions}）、预算（${budget}）、节奏（${pace}）、饮食（${diet}）做个性化推荐。
+- 有老人或儿童时行程放慢。
 - 景点名称用【】标记，例如【西湖】。
-- 内容要实用、具体，不要泛泛而谈。
-- 总字数控制在 3000-5000 字。`;
+- 内容实用具体，不泛泛而谈。
+- 总字数控制在 1500-2500 字，简洁为主。`;
 }
 async function generateGuide() {
   const destination = document.getElementById('destination').value.trim();
@@ -530,9 +526,9 @@ function renderTab(tab) {
   const sections = {
     full: '',
     cost: extractSection(currentResult, ['三、费用估算', '费用估算']),
-    weather: extractSection(currentResult, ['四、天气', '天气与出行建议']),
-    tickets: extractSection(currentResult, ['五、门票', '门票预约提醒']),
-    route: extractSection(currentResult, ['六、路线', '路线与交通建议'])
+    weather: extractSection(currentResult, ['四、实用提醒', '实用提醒']),
+    tickets: extractSection(currentResult, ['四、实用提醒', '实用提醒']),
+    route: extractSection(currentResult, ['四、实用提醒', '实用提醒'])
   };
   if (tab === 'full') {
     content.innerHTML = markdownToHtml(currentResult) + (isStreaming ? '<span class="streaming-cursor"></span>' : '');
