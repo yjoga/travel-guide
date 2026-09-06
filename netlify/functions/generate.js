@@ -1,56 +1,10 @@
-// Netlify Function: 代理 AI 攻略生成请求（智谱 AI 版 - 非流式）
+// Netlify Function: 代理 AI 攻略生成请求（智谱 AI 版 - 流式）
 // API Key 存在 Netlify 环境变量 ZHIPU_API_KEY 中，前端不可见
 
 const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const MODEL = 'glm-4-flash';
-const MAX_RETRIES = 2;
 
 const SYSTEM_PROMPT = '你是一个专业、资深的旅游攻略规划师，擅长根据用户的个性化需求制定详细、实用、可执行的旅游行程。你的回答要具体、有操作性，不要泛泛而谈。';
-
-async function callAI(apiKey, prompt, attempt = 0) {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt }
-      ],
-      stream: false,
-      max_tokens: 3000,
-      temperature: 0.7,
-      top_p: 0.9
-    })
-  });
-
-  const responseText = await response.text();
-
-  if (!response.ok) {
-    console.error(`AI API error (${response.status}):`, responseText.substring(0, 500));
-    if ((response.status === 502 || response.status === 503 || response.status === 504 || response.status === 429) && attempt < MAX_RETRIES) {
-      console.log(`Attempt ${attempt + 1} failed with ${response.status}, retrying...`);
-      await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
-      return callAI(apiKey, prompt, attempt + 1);
-    }
-    throw new Error(`AI 服务返回错误 (${response.status}): ${responseText.substring(0, 300)}`);
-  }
-
-  try {
-    const data = JSON.parse(responseText);
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('AI 返回内容为空: ' + responseText.substring(0, 300));
-    }
-    return content;
-  } catch (e) {
-    if (e.message.includes('AI 返回内容为空')) throw e;
-    throw new Error('AI 响应解析失败: ' + responseText.substring(0, 300));
-  }
-}
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -66,7 +20,7 @@ exports.handler = async (event, context) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v6-zhipu-nostream' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed', model: MODEL, version: 'v7-zhipu-stream' }) };
   }
 
   try {
@@ -84,14 +38,45 @@ exports.handler = async (event, context) => {
       return { statusCode: 400, headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '缺少 prompt 参数' }) };
     }
 
-    console.log('Calling AI API...');
-    const content = await callAI(apiKey, prompt);
-    console.log('AI response received, length:', content.length);
+    console.log('Calling AI API (stream)...');
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ],
+        stream: true,
+        max_tokens: 3000,
+        temperature: 0.7,
+        top_p: 0.9
+      })
+    });
 
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`AI API error (${response.status}):`, errText.substring(0, 500));
+      return {
+        statusCode: response.status,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: `AI 服务返回错误 (${response.status}): ${errText.substring(0, 300)}`, model: MODEL })
+      };
+    }
+
+    console.log('AI stream started, forwarding...');
     return {
       statusCode: 200,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content, model: MODEL, version: 'v6-zhipu-nostream' })
+      headers: {
+        ...headers,
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive'
+      },
+      body: response.body
     };
 
   } catch (error) {
@@ -99,7 +84,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: error.message, model: MODEL, version: 'v6-zhipu-nostream' })
+      body: JSON.stringify({ error: '服务器内部错误: ' + error.message, model: MODEL, version: 'v7-zhipu-stream' })
     };
   }
 };
