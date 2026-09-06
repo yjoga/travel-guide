@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>AI 旅游攻略生成器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #5B8DEF;
+    --primary-dark: #4A7AD9;
+    --primary-light: #EBF1FE;
+    --accent: #F5A623;
+    --text: #1A1B1E;
+    --text-secondary: #6B7280;
+    --bg: #F5F6FA;
+    --card: #FFFFFF;
+    --border: #E5E7EB;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 16px; }
+  .header { text-align: center; padding: 24px 0 20px; }
+  .header h1 {
+    font-size: 24px; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 6px;
+  }
+  .header p { font-size: 13px; color: var(--text-secondary); }
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .form-group label .required { color: #EA6668; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 14px; font-family: inherit;
+    background: #FAFBFC; color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(91,141,239,0.12); background: #fff;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+  }
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .checkbox-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px;
+    font-size: 13px; cursor: pointer; transition: all 0.2s; background: #FAFBFC;
+  }
+  .checkbox-item input { display: none; }
+  .checkbox-item.checked {
+    border-color: var(--primary); background: var(--primary-light);
+    color: var(--primary-dark); font-weight: 500;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 24px; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff; box-shadow: 0 4px 14px rgba(91,141,239,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(91,141,239,0.4); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--primary-light); color: var(--primary-dark); }
+  .btn-block { width: 100%; }
+  .loading-box { text-align: center; padding: 40px 20px; }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--primary-light);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--text-secondary); }
+  .loading-sub { font-size: 12px; color: var(--text-secondary); margin-top: 6px; opacity: 0.8; }
+  .tabs {
+    display: flex; gap: 4px; overflow-x: auto; padding: 4px;
+    background: var(--bg); border-radius: 12px; margin-bottom: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 8px 14px; border: none; background: transparent;
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    cursor: pointer; border-radius: 8px; transition: all 0.2s;
+    font-family: inherit; white-space: nowrap;
+  }
+  .tab.active {
+    background: var(--card); color: var(--primary-dark); font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .result-content { font-size: 14px; line-height: 1.8; color: var(--text); }
+  .result-content h2 {
+    font-size: 17px; font-weight: 700; margin: 20px 0 10px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--primary-light); color: var(--primary-dark);
+  }
+  .result-content h3 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+  .result-content p { margin-bottom: 10px; }
+  .result-content ul, .result-content ol { margin: 8px 0 12px; padding-left: 20px; }
+  .result-content li { margin-bottom: 6px; }
+  .result-content strong { color: var(--primary-dark); }
+  .result-content blockquote {
+    border-left: 3px solid var(--primary); padding: 8px 14px; margin: 12px 0;
+    background: var(--primary-light); border-radius: 0 8px 8px 0; font-size: 13px;
+  }
+  .result-content hr { border: none; border-top: 1px dashed var(--border); margin: 16px 0; }
+  .streaming-cursor {
+    display: inline-block; width: 2px; height: 16px; background: var(--primary);
+    animation: blink 0.8s infinite; vertical-align: middle; margin-left: 2px;
+  }
+  @keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+  .action-bar {
+    display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  .action-bar .btn { flex: 1; padding: 10px; font-size: 13px; }
+  .footer { text-align: center; padding: 24px 0 16px; font-size: 12px; color: var(--text-secondary); opacity: 0.7; }
+  .footer-line { width: 40px; height: 1px; background: var(--border); margin: 0 auto 12px; }
+  .toast {
+    position: fixed; top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px;
+    border-radius: 10px; font-size: 13px; z-index: 9999;
+    transition: transform 0.3s; max-width: 90%; text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .section-label {
+    font-size: 12px; font-weight: 600; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .travelers-list { display: flex; flex-direction: column; gap: 10px; }
+  .traveler-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; background: var(--bg); border-radius: 10px;
+  }
+  .traveler-num {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--primary);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .traveler-item select, .traveler-item input { padding: 8px 10px; font-size: 13px; }
+  @media (max-width: 480px) {
+    .container { padding: 12px; }
+    .card { padding: 16px; }
+    .header h1 { font-size: 20px; }
+    .form-row { flex-direction: column; gap: 0; }
+    .btn { padding: 11px 20px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>✈️ AI 旅游攻略生成器</h1>
+    <p>输入你的出行信息，AI 为你定制专属旅游攻略</p>
+  </div>
+  <div id="form-section">
+    <div class="card">
+      <div class="section-label">基本信息</div>
+      <div class="form-group">
+        <label>旅游目的地 <span class="required">*</span></label>
+        <input type="text" id="destination" placeholder="例如：杭州、成都、日本东京" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>出发地 <span class="required">*</span></label>
+          <input type="text" id="departure" placeholder="例如：上海" required>
+        </div>
+        <div class="form-group">
+          <label>游玩天数 <span class="required">*</span></label>
+          <input type="number" id="days" min="1" max="30" value="3" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>出发日期</label>
+          <input type="date" id="startDate">
+        </div>
+        <div class="form-group">
+          <label>出行人数</label>
+          <select id="travelersCount">
+            <option value="1">1 人</option>
+            <option value="2" selected>2 人</option>
+            <option value="3">3 人</option>
+            <option value="4">4 人</option>
+            <option value="5">5 人及以上</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">人群偏好</div>
+      <div id="travelersContainer">
+        <div class="travelers-list" id="travelersList"></div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>爱好（可多选）</label>
+        <div class="checkbox-group" id="hobbiesGroup">
+          <label class="checkbox-item"><input type="checkbox" value="美食探店">美食探店</label>
+          <label class="checkbox-item"><input type="checkbox" value="自然风光">自然风光</label>
+          <label class="checkbox-item"><input type="checkbox" value="历史文化">历史文化</label>
+          <label class="checkbox-item"><input type="checkbox" value="购物逛街">购物逛街</label>
+          <label class="checkbox-item"><input type="checkbox" value="亲子游乐">亲子游乐</label>
+          <label class="checkbox-item"><input type="checkbox" value="摄影打卡">摄影打卡</label>
+          <label class="checkbox-item"><input type="checkbox" value="休闲度假">休闲度假</label>
+          <label class="checkbox-item"><input type="checkbox" value="户外运动">户外运动</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>同行人群</label>
+        <div class="checkbox-group" id="companionGroup">
+          <label class="checkbox-item"><input type="checkbox" value="有老人">有老人</label>
+          <label class="checkbox-item"><input type="checkbox" value="有儿童">有儿童</label>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">细节偏好</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>预算档次</label>
+          <select id="budget">
+            <option value="经济实惠">经济实惠</option>
+            <option value="舒适适中" selected>舒适适中</option>
+            <option value="高端奢华">高端奢华</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>交通方式</label>
+          <select id="transport">
+            <option value="高铁/动车">高铁/动车</option>
+            <option value="飞机">飞机</option>
+            <option value="自驾">自驾</option>
+            <option value="租车">租车</option>
+            <option value="公共交通">公共交通</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>住宿偏好</label>
+          <select id="accommodation">
+            <option value="经济型酒店/青旅">经济型/青旅</option>
+            <option value="舒适型酒店" selected>舒适型酒店</option>
+            <option value="高端酒店/民宿">高端酒店/民宿</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>游玩节奏</label>
+          <select id="pace">
+            <option value="紧凑打卡">紧凑打卡</option>
+            <option value="适中" selected>适中</option>
+            <option value="轻松慢游">轻松慢游</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>饮食忌口 / 偏好</label>
+        <input type="text" id="diet" placeholder="例如：不吃辣、素食、喜欢海鲜">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" id="generateBtn" onclick="generateGuide()">
+      <span id="btnText">✨ 生成我的专属攻略</span>
+    </button>
+  </div>
+  <div id="loading-section" style="display:none;">
+    <div class="card">
+      <div class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">AI 正在为你规划行程...</div>
+        <div class="loading-sub" id="loadingSub">通常需要 10-30 秒，请稍候</div>
+      </div>
+    </div>
+  </div>
+  <div id="result-section" style="display:none;">
+    <div class="card">
+      <div class="tabs" id="resultTabs">
+        <button class="tab active" data-tab="full">📋 完整攻略</button>
+        <button class="tab" data-tab="cost">💰 费用估算</button>
+        <button class="tab" data-tab="weather">🌤 天气建议</button>
+        <button class="tab" data-tab="tickets">🎫 门票提醒</button>
+        <button class="tab" data-tab="route">🗺 路线建议</button>
+      </div>
+      <div class="result-content" id="resultContent"></div>
+      <div class="action-bar">
+        <button class="btn btn-secondary" onclick="copyResult()">📋 复制全文</button>
+        <button class="btn btn-secondary" onclick="regenerate()">🔄 重新生成</button>
+        <button class="btn btn-secondary" onclick="backToForm()">✏️ 修改信息</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="footer-line"></div>
+    © 2026 永生雷神 · 版权所有
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let currentResult = '';
+let isStreaming = false;
+document.addEventListener('DOMContentLoaded', function() {
+  initTravelers();
+  initCheckboxGroups();
+  document.getElementById('travelersCount').addEventListener('change', initTravelers);
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      renderTab(this.dataset.tab);
+    });
+  });
+});
+function initTravelers() {
+  const count = parseInt(document.getElementById('travelersCount').value);
+  const list = document.getElementById('travelersList');
+  list.innerHTML = '';
+  const displayCount = Math.min(count, 4);
+  for (let i = 0; i < displayCount; i++) {
+    const item = document.createElement('div');
+    item.className = 'traveler-item';
+    item.innerHTML = `<div class="traveler-num">${i + 1}</div><select class="traveler-gender" style="flex:1;"><option value="女">女</option><option value="男">男</option></select><input type="number" class="traveler-age" placeholder="年龄" min="1" max="100" value="${25 + i}" style="width:80px;">`;
+    list.appendChild(item);
+  }
+  if (count > 4) {
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:12px;color:var(--text-secondary);margin-top:6px;';
+    note.textContent = `其余 ${count - 4} 人按默认处理`;
+    list.appendChild(note);
+  }
+}
+function initCheckboxGroups() {
+  document.querySelectorAll('.checkbox-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      if (e.target.tagName !== 'INPUT') {
+        const input = this.querySelector('input');
+        input.checked = !input.checked;
+      }
+      this.classList.toggle('checked', this.querySelector('input').checked);
+    });
+  });
+}
+function getCheckedValues(groupId) {
+  return Array.from(document.querySelectorAll(`#${groupId} input:checked`)).map(i => i.value);
+}
+function getTravelersInfo() {
+  const items = document.querySelectorAll('.traveler-item');
+  return Array.from(items).map((item, i) => {
+    const gender = item.querySelector('.traveler-gender').value;
+    const age = item.querySelector('.traveler-age').value || '未知';
+    return `第${i + 1}人：${gender}，${age}岁`;
+  }).join('；');
+}
+function buildPrompt() {
+  const destination = document.getElementById('destination').value;
+  const departure = document.getElementById('departure').value;
+  const days = document.getElementById('days').value;
+  const startDate = document.getElementById('startDate').value || '未指定';
+  const travelersCount = document.getElementById('travelersCount').value;
+  const travelersInfo = getTravelersInfo();
+  const hobbies = getCheckedValues('hobbiesGroup').join('、') || '未指定';
+  const companions = getCheckedValues('companionGroup').join('、') || '无';
+  const budget = document.getElementById('budget').value;
+  const transport = document.getElementById('transport').value;
+  const accommodation = document.getElementById('accommodation').value;
+  const pace = document.getElementById('pace').value;
+  const diet = document.getElementById('diet').value || '无特殊忌口';
+  return `请为我规划一份详细的旅游攻略，要求如下：
+
+【基本信息】
+- 目的地：${destination}
+- 出发地：${departure}
+- 游玩天数：${days}天
+- 出发日期：${startDate}
+- 出行人数：${travelersCount}人（${travelersInfo}）
+
+【偏好信息】
+- 爱好：${hobbies}
+- 同行人群：${companions}
+- 预算档次：${budget}
+- 交通方式：${transport}
+- 住宿偏好：${accommodation}
+- 游玩节奏：${pace}
+- 饮食忌口/偏好：${diet}
+
+【输出要求】
+请严格按照以下结构输出，使用 Markdown 格式：
+
+## 一、行程总览
+简要介绍这次旅行的整体安排、亮点和注意事项。
+
+## 二、每日行程
+按天详细安排，每天包含上午、中午、下午、晚上的行程，包括：
+- 景点推荐（含景点介绍、建议游玩时间、门票参考）
+- 餐饮推荐（符合预算和饮食偏好）
+- 交通衔接（景点之间的移动方式和大致耗时）
+- 住宿建议
+
+## 三、费用估算
+分项列出费用明细：交通费、住宿费、门票费、餐饮费、其他费用，以及总计。按${budget}预算估算。
+
+## 四、天气与出行建议
+根据${destination}的季节和气候特点，给出穿衣建议、必备物品、天气应对方案。
+
+## 五、门票预约提醒
+列出需要提前预约的景点，包括预约渠道、建议提前天数、注意事项。
+
+## 六、路线与交通建议
+给出整体路线规划建议、交通方式选择、市内交通攻略、返程安排。
+
+【重要提醒】
+- 所有推荐要结合用户的爱好（${hobbies}）、同行人群（${companions}）、预算（${budget}）、节奏（${pace}）、饮食偏好（${diet}）做个性化定制。
+- 如果有老人或儿童，行程节奏要放慢，安排休息时间。
+- 景点名称用【】标记，例如【西湖】。
+- 内容要实用、具体，不要泛泛而谈。
+- 总字数控制在 3000-5000 字。`;
+}
+async function generateGuide() {
+  const destination = document.getElementById('destination').value.trim();
+  const departure = document.getElementById('departure').value.trim();
+  const days = document.getElementById('days').value;
+  if (!destination) { showToast('请填写旅游目的地'); return; }
+  if (!departure) { showToast('请填写出发地'); return; }
+  if (!days || days < 1) { showToast('请填写有效的游玩天数'); return; }
+  isStreaming = true;
+  currentResult = '';
+  document.getElementById('form-section').style.display = 'none';
+  document.getElementById('result-section').style.display = 'none';
+  document.getElementById('loading-section').style.display = 'block';
+  document.getElementById('generateBtn').disabled = true;
+  const loadingTexts = ['AI 正在为你规划行程...','正在分析目的地景点...','正在匹配你的偏好...','正在安排每日行程...','正在估算费用...','正在整理攻略...'];
+  let textIdx = 0;
+  const textInterval = setInterval(() => {
+    textIdx = (textIdx + 1) % loadingTexts.length;
+    document.getElementById('loadingText').textContent = loadingTexts[textIdx];
+  }, 4000);
+  try {
+    const prompt = buildPrompt();
+    const response = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    if (!response.ok) {
+      let errMsg = `API 请求失败 (${response.status})`;
+      try {
+        const errData = await response.json();
+        if (errData.error) errMsg += ': ' + errData.error;
+      } catch(e) {}
+      throw new Error(errMsg);
+    }
+    clearInterval(textInterval);
+    document.getElementById('loading-section').style.display = 'none';
+    document.getElementById('result-section').style.display = 'block';
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const data = trimmed.slice(5).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const json = JSON.parse(data);
+          const content = json.choices?.[0]?.delta?.content;
+          if (content) {
+            currentResult += content;
+            updateResultDisplay();
+          }
+        } catch (e) {}
+      }
+    }
+    isStreaming = false;
+    document.getElementById('generateBtn').disabled = false;
+    updateResultDisplay();
+  } catch (error) {
+    clearInterval(textInterval);
+    isStreaming = false;
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('loading-section').style.display = 'none';
+    document.getElementById('form-section').style.display = 'block';
+    console.error('生成失败:', error);
+    let errorMsg = '生成失败，请稍后重试。';
+    if (error.message.includes('Failed to fetch')) {
+      errorMsg = '网络连接失败，请确认已正确部署后端函数（Netlify Functions）。';
+    } else if (error.message) {
+      errorMsg = '生成失败：' + error.message;
+    }
+    showToast(errorMsg, 4000);
+  }
+}
+function updateResultDisplay() {
+  const tab = document.querySelector('.tab.active').dataset.tab;
+  renderTab(tab);
+}
+function renderTab(tab) {
+  const content = document.getElementById('resultContent');
+  const sections = {
+    full: '',
+    cost: extractSection(currentResult, ['三、费用估算', '费用估算']),
+    weather: extractSection(currentResult, ['四、天气', '天气与出行建议']),
+    tickets: extractSection(currentResult, ['五、门票', '门票预约提醒']),
+    route: extractSection(currentResult, ['六、路线', '路线与交通建议'])
+  };
+  if (tab === 'full') {
+    content.innerHTML = markdownToHtml(currentResult) + (isStreaming ? '<span class="streaming-cursor"></span>' : '');
+  } else {
+    const sectionText = sections[tab];
+    if (sectionText) {
+      content.innerHTML = markdownToHtml(sectionText);
+    } else {
+      content.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-secondary);font-size:14px;">该部分内容正在生成中...</div>';
+    }
+  }
+}
+function extractSection(text, keywords) {
+  if (!text) return '';
+  for (const kw of keywords) {
+    const regex = new RegExp(`#{1,3}\\s*${escapeRegExp(kw)}[\\s\\S]*?(?=\\n#{1,3}\\s|$)`, 'i');
+    const match = text.match(regex);
+    if (match) return match[0];
+  }
+  return '';
+}
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function markdownToHtml(text) {
+  if (!text) return '';
+  let html = text;
+  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/【(.*?)】/g, '<strong style="color:var(--primary-dark);">【$1】</strong>');
+  html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, function(match) { return '<ul>' + match + '</ul>'; });
+  html = html.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, function(match) {
+    if (!match.includes('<ul>')) return '<ol>' + match + '</ol>';
+    return match;
+  });
+  html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+  html = html.replace(/^---$/gm, '<hr>');
+  html = html.replace(/\n{2,}/g, '</p><p>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+function copyResult() {
+  if (!currentResult) { showToast('暂无内容可复制'); return; }
+  const textArea = document.createElement('textarea');
+  textArea.value = currentResult;
+  textArea.style.position = 'fixed';
+  textArea.style.opacity = '0';
+  document.body.appendChild(textArea);
+  textArea.select();
+  try {
+    document.execCommand('copy');
+    showToast('已复制到剪贴板');
+  } catch (e) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(currentResult).then(() => { showToast('已复制到剪贴板'); }).catch(() => { showToast('复制失败，请手动复制'); });
+    } else {
+      showToast('复制失败，请手动复制');
+    }
+  }
+  document.body.removeChild(textArea);
+}
+function regenerate() {
+  document.getElementById('result-section').style.display = 'none';
+  currentResult = '';
+  generateGuide();
+}
+function backToForm() {
+  document.getElementById('result-section').style.display = 'none';
+  document.getElementById('form-section').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function showToast(msg, duration) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => { toast.classList.remove('show'); }, duration || 2500);
+}
+</script>
+</body>
+</html>
